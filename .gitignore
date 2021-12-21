@@ -148,3 +148,8 @@ challenge-call-center/_build/default/plugins/rebar3_gpb_plugin/src/rebar3_gpb_pl
 challenge-call-center/_build/default/plugins/rebar3_gpb_plugin/src/rebar3_gpb_plugin.erl
 challenge-call-center/_build/default/plugins/rebar3_gpb_plugin/src/rebar3_gpb_prv_clean.erl
 challenge-call-center/_build/default/plugins/rebar3_gpb_plugin/src/rebar3_gpb_prv_compile.erl
+challenge-call-center/_build/default/lib/gpb
+challenge-call-center/_build/default/lib/lager
+challenge-call-center/_build/default/lib/ranch
+challenge-call-center/_build/default/lib/recon
+challenge-call-center/_build/default/lib/vsn_transform

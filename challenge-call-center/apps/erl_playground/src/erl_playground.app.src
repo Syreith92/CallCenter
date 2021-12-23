@@ -2,7 +2,7 @@
  [{description, "A safe playground for all your dirty stuff"},
   {vsn, "1.0.0"},
   {registered, []},
-  {mod, { erl_playground_app, []}},
+  {mod, { erl_playground_app, [test]}},
   {applications,
    [kernel,
     stdlib,
@@ -10,5 +10,5 @@
     recon
    ]},
   {env,[]},
-  {modules, []}
+  {modules, [test]}
  ]}.

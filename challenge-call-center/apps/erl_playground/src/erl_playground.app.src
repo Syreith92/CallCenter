@@ -9,6 +9,6 @@
     lager,
     recon
    ]},
-  {env,[]},
-  {modules, [test]}
+  {env, [{maxMsg, 3}, {maxSeconds, 10}]},
+  {modules, [client]}
  ]}.

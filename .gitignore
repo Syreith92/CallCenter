@@ -3,3 +3,4 @@ challenge-call-center/log/crash.log
 challenge-call-center/log/error.log
 challenge-call-center/rebar.lock
 challenge-call-center/_build/default
+rebar.lock

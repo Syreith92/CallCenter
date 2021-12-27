@@ -30,7 +30,9 @@
 
 -record(state, {
     socket :: any(), %ranch_transport:socket(),
-    transport
+    transport,
+    userID,
+    username = ""
 }).
 -type state() :: #state{}.
 
@@ -139,22 +141,36 @@ code_change(_OldVsn, State, _Extra) ->
 process_packet(undefined, State, _Now) ->
     _ = lager:notice("client sent invalid packet, ignoring ~p",[State]),
     State;
-process_packet(#req{ type = Type } = Req, State = {ok, #state{socket = Socket, transport = Transport}}, _Now)
-    when Type =:= create_session ->
-    #req{
-        create_session_data = #create_session {
-            username = UserName
-        }
-    } = Req,
-    _ = lager:info("create_session received from ~p", [UserName]),
+process_packet(#req{ type = Type } = Req, State = #state{}, _Now) ->
+    case handle_request(Type, Req, State) of
+        {noreply, NewState} -> NewState;
+        {Response, NewState} -> send(Response, NewState), NewState
+    end.
 
-    Response = #req{
+send(Response, #state{socket = Socket, transport = Transport}) ->
+    send(Response, Socket, Transport).
+
+send(Response, Socket, Transport) ->
+    Data = utils:add_envelope(Response),
+    Transport:send(Socket,Data).
+
+%% ------------------------------------------------------------------
+%% Request handlers
+%% ------------------------------------------------------------------
+server_message(Msg) ->
+    #req{
         type = server_message,
         server_message_data = #server_message {
-            message = <<"OK">>
+            message = Msg
         }
-    },
-    Data = utils:add_envelope(Response),
-    Transport:send(Socket,Data),
+    }.
 
-    State.
+handle_request(create_session, #req {create_session_data = #create_session{ username = Username}}, State) ->
+    NewState = State#state{username = Username},
+    {server_message(io_lib:format("Welcome ~s!~n", [Username])), NewState};
+handle_request(caller_id_request, _Req, #state{userID = UID} = State) ->
+    {server_message(io_lib:format("----------------~n"
+                                  "* Caller ID:   *~n"
+                                  "* ~s *~n"
+                                  "----------------~n", [UID])),
+        State}.

@@ -10,5 +10,5 @@
     recon
    ]},
   {env, [{maxMsg, 3}, {maxSeconds, 10}]},
-  {modules, [client]}
+  {modules, [client, userid]}
  ]}.

@@ -9,7 +9,7 @@
 
 -export([start_link/0]). -ignore_xref([{start_link, 4}]).
 -export([connect/0, disconnect/0]).
--export([send_create_session/0]).
+-export([send_create_session/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -51,12 +51,19 @@ disconnect() ->
     gen_server:call(whereis(?SERVER), disconnect),
     ok.
 
--spec send_create_session() -> ok.
-send_create_session() ->
-    CreateSession = #create_session {
-        username = <<"TestUser">>
+-spec send_create_session(_Username) -> ok.
+send_create_session(Username) ->
+    Req = #req {
+        type = create_session,
+        create_session_data = #create_session {
+            username = Username
+        }
     },
-    gen_server:cast(whereis(?SERVER), {create_session, CreateSession}).
+
+    %%CreateSession = #create_session {
+    %%    username = <<"TestUser">>
+    %%},
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -68,19 +75,22 @@ init(_ARgs) ->
     lager:info("sockclient init'ed"),
     {ok, #state{}}.
 
-handle_cast({create_session, CreateSession}, #state{socket = Socket} = State)
-    when Socket =/= undefined ->
-    Req = #req {
-        type = create_session,
-        create_session_data = CreateSession
-    },
-    Data = utils:add_envelope(Req),
+handle_cast({send_msg, Req}, #state{socket = Socket} = State)
+    when Socket =/= undefined -> 
+        send(Req, Socket),
+        
+    %%Req = #req {
+    %%    type = create_session,
+    %%    create_session_data = CreateSession
+    %%},
+    %%Data = utils:add_envelope(Req),
 
-    gen_tcp:send(Socket, Data),
+    %%gen_tcp:send(Socket, Data),
 
-    {noreply, State};
+        {noreply, State};
 handle_cast(Message, State) ->
     _ = lager:warning("No handle_cast for ~p", [Message]),
+    _ = lager:warning("State ~p", [State]),
     {noreply, State}.
 
 handle_info({tcp_closed, _Port}, State) ->
@@ -134,3 +144,7 @@ process_packet(#req{ type = Type } = Req, State, _Now)
     } = Req,
     _ = lager:info("server_message received: ~p", [Message]),
     State.
+
+send(Req, Socket) ->
+    Data = utils:add_envelope(Req),
+    gen_tcp:send(Socket, Data).

@@ -46,7 +46,14 @@ run() ->
               "* Welcome to CallCenter v1.0! *~n"
               "-------------------------------~n"),
     save_username(),
-    main_menu(functionalities()).
+    loop(functionalities()).
+
+loop(Functionalities) ->
+    timer:sleep(100),
+    case main_menu(Functionalities) of
+        quit -> ok;
+        _ -> loop(Functionalities)
+    end.
 
 save_username() ->
     Username = ask("Please insert your username: "),
@@ -73,16 +80,28 @@ ask(Prompt) ->
     end.
 
 handle_userID() ->
-    userID.
+    sockclient:send_user_id_req().
 
 handle_joke() ->
-    joke.
+    sockclient:send_joke_req().
 
 handle_weather() ->
-    forecasts.
+    sockclient:send_forecast_req().
 
 handle_operator_req() ->
-    operator.
+    sockclient:send_operator_req(),
+    io:format("Write 'bye' to quit chat.~n"),
+    operator_chat_loop().
+
+operator_chat_loop() ->
+    case ask("> ") of
+        "bye" ->
+            sockclient:send_operator_quit_req(),
+            ok;
+        Msg ->
+            sockclient:send_operator_msg_req(Msg),
+            operator_chat_loop()
+    end.
 
 flush() ->
     receive

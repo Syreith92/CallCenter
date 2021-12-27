@@ -9,7 +9,8 @@
 
 -export([start_link/0]). -ignore_xref([{start_link, 4}]).
 -export([connect/1, disconnect/0]).
--export([send_create_session/1]).
+-export([send_create_session/1, send_forecast_req/0, send_user_id_req/0, send_joke_req/0]).
+-export([send_operator_req/0, send_operator_quit_req/0, send_operator_msg_req/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -63,6 +64,51 @@ send_create_session(Username) ->
     %%CreateSession = #create_session {
     %%    username = <<"TestUser">>
     %%},
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
+
+-spec send_user_id_req() -> ok.
+send_user_id_req() ->
+    Req = #req {
+        type = caller_id_request    
+    },
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
+
+-spec send_joke_req() -> ok.
+send_joke_req() ->
+    Req = #req {
+        type = jokes_request
+    },
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
+
+-spec send_forecast_req() -> ok.
+send_forecast_req() ->
+    Req = #req {
+        type = forecasts_req
+    },
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
+
+-spec send_operator_req() -> ok.
+send_operator_req() ->
+    Req = #req {
+        type = operator_request
+    },
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
+
+-spec send_operator_quit_req() -> ok.
+send_operator_quit_req() ->
+    Req = #req {
+        type = operator_quit_req
+    },
+    gen_server:cast(whereis(?SERVER), {send_msg, Req}).
+
+-spec send_operator_msg_req(_Msg) -> ok.
+send_operator_msg_req(Msg) ->
+    Req = #req {
+        type = operator_msg_req,
+        operator_msg = #operator_message {
+            message = Msg
+        }
+    },
     gen_server:cast(whereis(?SERVER), {send_msg, Req}).
 
 %% ------------------------------------------------------------------

@@ -49,7 +49,7 @@
 -include("gpb.hrl").
 
 %% enumerated types
--type 'req.type_enum'() :: create_session | server_message | caller_id_request | jokes_request | time_weather_request | operator_request.
+-type 'req.type_enum'() :: create_session | server_message | caller_id_request | jokes_request | forecasts_req | operator_request | operator_msg_req | operator_quit_req.
 -export_type(['req.type_enum'/0]).
 
 %% message types
@@ -220,12 +220,18 @@ e_mfield_envelope_uncompressed_data(Msg, Bin,
 'e_enum_req.type_enum'(jokes_request, Bin,
 		       _TrUserData) ->
     <<Bin/binary, 4>>;
-'e_enum_req.type_enum'(time_weather_request, Bin,
+'e_enum_req.type_enum'(forecasts_req, Bin,
 		       _TrUserData) ->
     <<Bin/binary, 5>>;
 'e_enum_req.type_enum'(operator_request, Bin,
 		       _TrUserData) ->
     <<Bin/binary, 6>>;
+'e_enum_req.type_enum'(operator_msg_req, Bin,
+		       _TrUserData) ->
+    <<Bin/binary, 7>>;
+'e_enum_req.type_enum'(operator_quit_req, Bin,
+		       _TrUserData) ->
+    <<Bin/binary, 8>>;
 'e_enum_req.type_enum'(V, Bin, _TrUserData) ->
     e_varint(V, Bin).
 
@@ -988,8 +994,10 @@ skip_64_envelope(<<_:64, Rest/binary>>, Z1, Z2, F@_1,
 'd_enum_req.type_enum'(2) -> server_message;
 'd_enum_req.type_enum'(3) -> caller_id_request;
 'd_enum_req.type_enum'(4) -> jokes_request;
-'d_enum_req.type_enum'(5) -> time_weather_request;
+'d_enum_req.type_enum'(5) -> forecasts_req;
 'd_enum_req.type_enum'(6) -> operator_request;
+'d_enum_req.type_enum'(7) -> operator_msg_req;
+'d_enum_req.type_enum'(8) -> operator_quit_req;
 'd_enum_req.type_enum'(V) -> V.
 
 read_group(Bin, FieldNum) ->
@@ -1239,10 +1247,16 @@ v_msg_envelope(X, Path, _TrUserData) ->
 'v_enum_req.type_enum'(jokes_request, _Path,
 		       _TrUserData) ->
     ok;
-'v_enum_req.type_enum'(time_weather_request, _Path,
+'v_enum_req.type_enum'(forecasts_req, _Path,
 		       _TrUserData) ->
     ok;
 'v_enum_req.type_enum'(operator_request, _Path,
+		       _TrUserData) ->
+    ok;
+'v_enum_req.type_enum'(operator_msg_req, _Path,
+		       _TrUserData) ->
+    ok;
+'v_enum_req.type_enum'(operator_quit_req, _Path,
 		       _TrUserData) ->
     ok;
 'v_enum_req.type_enum'(V, Path, TrUserData)
@@ -1324,7 +1338,8 @@ get_msg_defs() ->
     [{{enum, 'req.type_enum'},
       [{create_session, 1}, {server_message, 2},
        {caller_id_request, 3}, {jokes_request, 4},
-       {time_weather_request, 5}, {operator_request, 6}]},
+       {forecasts_req, 5}, {operator_request, 6},
+       {operator_msg_req, 7}, {operator_quit_req, 8}]},
      {{msg, create_session},
       [#field{name = username, fnum = 1, rnum = 2,
 	      type = string, occurrence = required, opts = []}]},
@@ -1413,7 +1428,8 @@ find_msg_def(_) -> error.
 find_enum_def('req.type_enum') ->
     [{create_session, 1}, {server_message, 2},
      {caller_id_request, 3}, {jokes_request, 4},
-     {time_weather_request, 5}, {operator_request, 6}];
+     {forecasts_req, 5}, {operator_request, 6},
+     {operator_msg_req, 7}, {operator_quit_req, 8}];
 find_enum_def(_) -> error.
 
 
@@ -1434,9 +1450,13 @@ enum_value_by_symbol('req.type_enum', Sym) ->
 'enum_symbol_by_value_req.type_enum'(4) ->
     jokes_request;
 'enum_symbol_by_value_req.type_enum'(5) ->
-    time_weather_request;
+    forecasts_req;
 'enum_symbol_by_value_req.type_enum'(6) ->
-    operator_request.
+    operator_request;
+'enum_symbol_by_value_req.type_enum'(7) ->
+    operator_msg_req;
+'enum_symbol_by_value_req.type_enum'(8) ->
+    operator_quit_req.
 
 
 'enum_value_by_symbol_req.type_enum'(create_session) ->
@@ -1447,10 +1467,14 @@ enum_value_by_symbol('req.type_enum', Sym) ->
     3;
 'enum_value_by_symbol_req.type_enum'(jokes_request) ->
     4;
-'enum_value_by_symbol_req.type_enum'(time_weather_request) ->
+'enum_value_by_symbol_req.type_enum'(forecasts_req) ->
     5;
 'enum_value_by_symbol_req.type_enum'(operator_request) ->
-    6.
+    6;
+'enum_value_by_symbol_req.type_enum'(operator_msg_req) ->
+    7;
+'enum_value_by_symbol_req.type_enum'(operator_quit_req) ->
+    8.
 
 
 get_service_names() -> [].

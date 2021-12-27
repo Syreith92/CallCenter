@@ -8,7 +8,7 @@
 %% ------------------------------------------------------------------
 
 -export([start_link/0]). -ignore_xref([{start_link, 4}]).
--export([connect/0, disconnect/0]).
+-export([connect/1, disconnect/0]).
 -export([send_create_session/1]).
 
 %% ------------------------------------------------------------------
@@ -41,9 +41,9 @@
 start_link() ->
     {ok, _} = gen_server:start_link({local, ?SERVER}, ?CB_MODULE, [], []).
 
--spec connect() -> ok.
-connect() ->
-    gen_server:call(whereis(?SERVER), connect),
+-spec connect(_) -> ok.
+connect(Ref) ->
+    gen_server:call(whereis(?SERVER), {connect, Ref}),
     ok.
 
 -spec disconnect() -> ok.
@@ -90,7 +90,6 @@ handle_cast({send_msg, Req}, #state{socket = Socket} = State)
         {noreply, State};
 handle_cast(Message, State) ->
     _ = lager:warning("No handle_cast for ~p", [Message]),
-    _ = lager:warning("State ~p", [State]),
     {noreply, State}.
 
 handle_info({tcp_closed, _Port}, State) ->

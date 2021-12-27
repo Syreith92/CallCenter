@@ -9,7 +9,7 @@ functionalities() ->
         #functionality{name = "Request user ID", handler = fun handle_userID/0},
         #functionality{name = "Joke of the day", handler = fun handle_joke/0},
         #functionality{name = "Weather forecasts", handler = fun handle_weather/0},
-        #functionality{name = "Aske for an operator", handler = fun handle_operator_req/0},
+        #functionality{name = "Ask for an operator", handler = fun handle_operator_req/0},
         #functionality{name = "Close the call", handler = fun () -> quit end}
     ].
 
@@ -40,7 +40,8 @@ build_menu_msg(Msg, N, [#functionality{name = Name} | Functionalities]) ->
     build_menu_msg(New_line, N+1, Functionalities).
 
 run() ->
-    sockclient:connect(),
+    Flusher = spawn(fun flush/0),
+    sockclient:connect(Flusher),
     io:format("-------------------------------~n"
               "* Welcome to CallCenter v1.0! *~n"
               "-------------------------------~n"),
@@ -82,3 +83,10 @@ handle_weather() ->
 
 handle_operator_req() ->
     operator.
+
+flush() ->
+    receive
+        Message ->
+            io:format(Message),
+            flush()
+    end.

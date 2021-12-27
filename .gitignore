@@ -1,6 +1,4 @@
-challenge-call-center/log/console.log
-challenge-call-center/log/crash.log
-challenge-call-center/log/error.log
+challenge-call-center/log/
 challenge-call-center/rebar.lock
-challenge-call-center/_build/default
+challenge-call-center/_build/
 rebar.lock

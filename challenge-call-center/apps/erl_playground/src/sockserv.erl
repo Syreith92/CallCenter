@@ -185,4 +185,13 @@ handle_request(caller_id_request, _Req, #state{userID = UID} = State) ->
                                   "* Caller ID:   *~n"
                                   "* ~s *~n"
                                   "----------------~n", [UID])),
-        State}.
+        State};
+handle_request(jokes_request, _Req, State) ->
+    Joke = jokes:get_joke_for_today(calendar:now_to_datetime(os:timestamp())),
+    {server_message(build_joke_msg(Joke)), State}.
+
+build_joke_msg(Joke) ->
+    io_lib:format("-------------------------------------------------------------~n"
+                  "* Joke of the day:                                          *~n"
+                  "-------------------------------------------------------------~n"
+                  "~n~s~n", [Joke]).

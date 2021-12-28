@@ -73,6 +73,7 @@ boot(client_server) ->
     boot(only_client),
     ok;
 boot(only_server) ->
+    jokes:init(),
     sockserv:start(),
     ok;
 boot(only_client) ->

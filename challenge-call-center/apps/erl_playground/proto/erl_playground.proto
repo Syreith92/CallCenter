@@ -1,5 +1,5 @@
 message create_session {
-    
+    required string username = 1;
 }
 
 message server_message {

@@ -96,7 +96,17 @@ encode_msg(Msg, MsgName, Opts) ->
     end.
 
 
-encode_msg_create_session(_Msg, _TrUserData) -> <<>>.
+encode_msg_create_session(Msg, TrUserData) ->
+    encode_msg_create_session(Msg, <<>>, TrUserData).
+
+
+encode_msg_create_session(#create_session{username =
+					      F1},
+			  Bin, TrUserData) ->
+    begin
+      TrF1 = id(F1, TrUserData),
+      e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData)
+    end.
 
 encode_msg_server_message(Msg, TrUserData) ->
     encode_msg_server_message(Msg, <<>>, TrUserData).
@@ -172,9 +182,12 @@ encode_msg_envelope(#envelope{uncompressed_data = F1},
 					  <<Bin/binary, 18>>, TrUserData)
     end.
 
-e_mfield_req_create_session_data(_Msg, Bin,
-				 _TrUserData) ->
-    <<Bin/binary, 0>>.
+e_mfield_req_create_session_data(Msg, Bin,
+				 TrUserData) ->
+    SubBin = encode_msg_create_session(Msg, <<>>,
+				       TrUserData),
+    Bin2 = e_varint(byte_size(SubBin), Bin),
+    <<Bin2/binary, SubBin/binary>>.
 
 e_mfield_req_server_message_data(Msg, Bin,
 				 TrUserData) ->
@@ -354,74 +367,108 @@ decode_msg_2_doit(envelope, Bin, TrUserData) ->
 
 decode_msg_create_session(Bin, TrUserData) ->
     dfp_read_field_def_create_session(Bin, 0, 0,
-				      TrUserData).
+				      id(undefined, TrUserData), TrUserData).
 
-dfp_read_field_def_create_session(<<>>, 0, 0, _) ->
-    #create_session{};
-dfp_read_field_def_create_session(Other, Z1, Z2,
+dfp_read_field_def_create_session(<<10, Rest/binary>>,
+				  Z1, Z2, F@_1, TrUserData) ->
+    d_field_create_session_username(Rest, Z1, Z2, F@_1,
+				    TrUserData);
+dfp_read_field_def_create_session(<<>>, 0, 0, F@_1,
+				  _) ->
+    #create_session{username = F@_1};
+dfp_read_field_def_create_session(Other, Z1, Z2, F@_1,
 				  TrUserData) ->
-    dg_read_field_def_create_session(Other, Z1, Z2,
+    dg_read_field_def_create_session(Other, Z1, Z2, F@_1,
 				     TrUserData).
 
 dg_read_field_def_create_session(<<1:1, X:7,
 				   Rest/binary>>,
-				 N, Acc, TrUserData)
+				 N, Acc, F@_1, TrUserData)
     when N < 32 - 7 ->
     dg_read_field_def_create_session(Rest, N + 7,
-				     X bsl N + Acc, TrUserData);
+				     X bsl N + Acc, F@_1, TrUserData);
 dg_read_field_def_create_session(<<0:1, X:7,
 				   Rest/binary>>,
-				 N, Acc, TrUserData) ->
+				 N, Acc, F@_1, TrUserData) ->
     Key = X bsl N + Acc,
-    case Key band 7 of
-      0 -> skip_varint_create_session(Rest, 0, 0, TrUserData);
-      1 -> skip_64_create_session(Rest, 0, 0, TrUserData);
-      2 ->
-	  skip_length_delimited_create_session(Rest, 0, 0,
-					       TrUserData);
-      3 ->
-	  skip_group_create_session(Rest, Key bsr 3, 0,
-				    TrUserData);
-      5 -> skip_32_create_session(Rest, 0, 0, TrUserData)
+    case Key of
+      10 ->
+	  d_field_create_session_username(Rest, 0, 0, F@_1,
+					  TrUserData);
+      _ ->
+	  case Key band 7 of
+	    0 ->
+		skip_varint_create_session(Rest, 0, 0, F@_1,
+					   TrUserData);
+	    1 ->
+		skip_64_create_session(Rest, 0, 0, F@_1, TrUserData);
+	    2 ->
+		skip_length_delimited_create_session(Rest, 0, 0, F@_1,
+						     TrUserData);
+	    3 ->
+		skip_group_create_session(Rest, Key bsr 3, 0, F@_1,
+					  TrUserData);
+	    5 ->
+		skip_32_create_session(Rest, 0, 0, F@_1, TrUserData)
+	  end
     end;
-dg_read_field_def_create_session(<<>>, 0, 0, _) ->
-    #create_session{}.
+dg_read_field_def_create_session(<<>>, 0, 0, F@_1, _) ->
+    #create_session{username = F@_1}.
+
+d_field_create_session_username(<<1:1, X:7,
+				  Rest/binary>>,
+				N, Acc, F@_1, TrUserData)
+    when N < 57 ->
+    d_field_create_session_username(Rest, N + 7,
+				    X bsl N + Acc, F@_1, TrUserData);
+d_field_create_session_username(<<0:1, X:7,
+				  Rest/binary>>,
+				N, Acc, _, TrUserData) ->
+    {NewFValue, RestF} = begin
+			   Len = X bsl N + Acc,
+			   <<Bytes:Len/binary, Rest2/binary>> = Rest,
+			   {id(binary:copy(Bytes), TrUserData), Rest2}
+			 end,
+    dfp_read_field_def_create_session(RestF, 0, 0,
+				      NewFValue, TrUserData).
 
 skip_varint_create_session(<<1:1, _:7, Rest/binary>>,
-			   Z1, Z2, TrUserData) ->
-    skip_varint_create_session(Rest, Z1, Z2, TrUserData);
+			   Z1, Z2, F@_1, TrUserData) ->
+    skip_varint_create_session(Rest, Z1, Z2, F@_1,
+			       TrUserData);
 skip_varint_create_session(<<0:1, _:7, Rest/binary>>,
-			   Z1, Z2, TrUserData) ->
-    dfp_read_field_def_create_session(Rest, Z1, Z2,
+			   Z1, Z2, F@_1, TrUserData) ->
+    dfp_read_field_def_create_session(Rest, Z1, Z2, F@_1,
 				      TrUserData).
 
 skip_length_delimited_create_session(<<1:1, X:7,
 				       Rest/binary>>,
-				     N, Acc, TrUserData)
+				     N, Acc, F@_1, TrUserData)
     when N < 57 ->
     skip_length_delimited_create_session(Rest, N + 7,
-					 X bsl N + Acc, TrUserData);
+					 X bsl N + Acc, F@_1, TrUserData);
 skip_length_delimited_create_session(<<0:1, X:7,
 				       Rest/binary>>,
-				     N, Acc, TrUserData) ->
+				     N, Acc, F@_1, TrUserData) ->
     Length = X bsl N + Acc,
     <<_:Length/binary, Rest2/binary>> = Rest,
-    dfp_read_field_def_create_session(Rest2, 0, 0,
+    dfp_read_field_def_create_session(Rest2, 0, 0, F@_1,
 				      TrUserData).
 
-skip_group_create_session(Bin, FNum, Z2, TrUserData) ->
+skip_group_create_session(Bin, FNum, Z2, F@_1,
+			  TrUserData) ->
     {_, Rest} = read_group(Bin, FNum),
-    dfp_read_field_def_create_session(Rest, 0, Z2,
+    dfp_read_field_def_create_session(Rest, 0, Z2, F@_1,
 				      TrUserData).
 
 skip_32_create_session(<<_:32, Rest/binary>>, Z1, Z2,
-		       TrUserData) ->
-    dfp_read_field_def_create_session(Rest, Z1, Z2,
+		       F@_1, TrUserData) ->
+    dfp_read_field_def_create_session(Rest, Z1, Z2, F@_1,
 				      TrUserData).
 
 skip_64_create_session(<<_:64, Rest/binary>>, Z1, Z2,
-		       TrUserData) ->
-    dfp_read_field_def_create_session(Rest, Z1, Z2,
+		       F@_1, TrUserData) ->
+    dfp_read_field_def_create_session(Rest, Z1, Z2, F@_1,
 				      TrUserData).
 
 decode_msg_server_message(Bin, TrUserData) ->
@@ -1036,8 +1083,9 @@ merge_msgs(Prev, New, MsgName, Opts) ->
     end.
 
 -compile({nowarn_unused_function,merge_msg_create_session/3}).
-merge_msg_create_session(_Prev, New, _TrUserData) ->
-    New.
+merge_msg_create_session(#create_session{},
+			 #create_session{username = NFusername}, _) ->
+    #create_session{username = NFusername}.
 
 -compile({nowarn_unused_function,merge_msg_server_message/3}).
 merge_msg_server_message(#server_message{},
@@ -1128,7 +1176,9 @@ verify_msg(Msg, MsgName, Opts) ->
 
 -compile({nowarn_unused_function,v_msg_create_session/3}).
 -dialyzer({nowarn_function,v_msg_create_session/3}).
-v_msg_create_session(#create_session{}, _Path, _) -> ok;
+v_msg_create_session(#create_session{username = F1},
+		     Path, TrUserData) ->
+    v_type_string(F1, [username | Path], TrUserData), ok;
 v_msg_create_session(X, Path, _TrUserData) ->
     mk_type_error({expected_msg, create_session}, X, Path).
 
@@ -1290,7 +1340,9 @@ get_msg_defs() ->
        {caller_id_request, 3}, {jokes_request, 4},
        {forecasts_req, 5}, {operator_request, 6},
        {operator_msg_req, 7}, {operator_quit_req, 8}]},
-     {{msg, create_session}, []},
+     {{msg, create_session},
+      [#field{name = username, fnum = 1, rnum = 2,
+	      type = string, occurrence = required, opts = []}]},
      {{msg, server_message},
       [#field{name = message, fnum = 1, rnum = 2,
 	      type = string, occurrence = required, opts = []}]},
@@ -1345,7 +1397,9 @@ fetch_enum_def(EnumName) ->
     end.
 
 
-find_msg_def(create_session) -> [];
+find_msg_def(create_session) ->
+    [#field{name = username, fnum = 1, rnum = 2,
+	    type = string, occurrence = required, opts = []}];
 find_msg_def(server_message) ->
     [#field{name = message, fnum = 1, rnum = 2,
 	    type = string, occurrence = required, opts = []}];

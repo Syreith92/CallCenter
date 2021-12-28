@@ -45,8 +45,7 @@ run() ->
     io:format("-------------------------------~n"
               "* Welcome to CallCenter v1.0! *~n"
               "-------------------------------~n"),
-    %save_username(),
-    sockclient:send_create_session(),
+    save_username(),
     loop(functionalities()).
 
 loop(Functionalities) ->

@@ -177,9 +177,9 @@ server_message(Msg) ->
         }
     }.
 
-handle_request(create_session, #req{}, State) ->
-    NewState = State#state{},
-    {noreply, NewState};
+handle_request(create_session, #req {create_session_data = #create_session{ username = Username}}, State) ->
+    NewState = State#state{username = Username},
+    {server_message(io_lib:format("Welcome ~s!~n", [Username])), NewState};
 handle_request(caller_id_request, _Req, #state{userID = UID} = State) ->
     {server_message(io_lib:format("----------------~n"
                                   "* Caller ID:   *~n"

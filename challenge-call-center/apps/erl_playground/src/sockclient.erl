@@ -9,7 +9,7 @@
 
 -export([start_link/0]). -ignore_xref([{start_link, 4}]).
 -export([connect/1, disconnect/0]).
--export([send_create_session/0, send_forecast_req/0, send_user_id_req/0, send_joke_req/0]).
+-export([send_create_session/1, send_forecast_req/0, send_user_id_req/0, send_joke_req/0]).
 -export([send_operator_req/0, send_operator_quit_req/0, send_operator_msg_req/1]).
 
 %% ------------------------------------------------------------------
@@ -53,11 +53,13 @@ disconnect() ->
     gen_server:call(whereis(?SERVER), disconnect),
     ok.
 
--spec send_create_session() -> ok.
-send_create_session() ->
+-spec send_create_session(_) -> ok.
+send_create_session(Username) ->
     Req = #req {
-        type = create_session
-        
+        type = create_session,
+        create_session_data = #create_session{
+            username = Username
+        }        
     },
 
     %%CreateSession = #create_session {
@@ -122,7 +124,6 @@ init(_ARgs) ->
 
 handle_cast({send_msg, Req}, #state{socket = Socket} = State)
     when Socket =/= undefined -> 
-        lager:warning("Req ~p", [Req]),
     send(Req, Socket),
     {noreply, State};
 handle_cast(Message, State) ->
@@ -178,12 +179,10 @@ process_packet(#req{ type = Type } = Req, #state{ref = Ref} = State, _Now)
             message = Message
         }
     } = Req,
-    %%_ = lager:info("server_message received: ~p", [Message]),
+
     Ref ! Message,
     State.
 
 send(Req, Socket) ->
-    lager:warning("Prima di DATA!"),
     Data = utils:add_envelope(Req),
-    lager:warning("sono qui!"),
     gen_tcp:send(Socket, Data).

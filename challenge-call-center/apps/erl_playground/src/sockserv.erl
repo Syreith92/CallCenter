@@ -32,7 +32,8 @@
     socket :: any(), %ranch_transport:socket(),
     transport,
     userID,
-    username = ""
+    username = "",
+    operator
 }).
 -type state() :: #state{}.
 
@@ -84,10 +85,11 @@ init(Ref, Socket, Transport, [_ProxyProtocol]) ->
     Opts = [{packet, 2}, {packet_size, 16384}, {active, once}, {nodelay, true}],
     _ = Transport:setopts(Socket, Opts),
 
-    State = {ok, #state{
+    State = #state{
         socket = Socket,
-        transport = Transport
-    }},
+        transport = Transport,
+        userID = userid:generate()
+    },
 
     gen_server:enter_loop(?MODULE, [], State).
 
@@ -97,7 +99,7 @@ init(Ref, Socket, Transport, [_ProxyProtocol]) ->
 
 %% This function is never called. We only define it so that
 %% we can use the -behaviour(gen_server) attribute.
-init([]) -> {ok, undefined}.
+init([]) -> undefined.
 
 handle_cast(Message, State) ->
     _ = lager:notice("unknown handle_cast ~p", [Message]),
@@ -106,15 +108,25 @@ handle_cast(Message, State) ->
 handle_info({tcp, _Port, <<>>}, State) ->
     _ = lager:notice("empty handle_info state: ~p", [State]),
     {noreply, State};
-handle_info({tcp, _Port, Packet}, State = {ok, #state{socket = Socket}}) ->
-    Req = utils:open_envelope(Packet),
+handle_info({tcp, _Port, Packet}, State = #state{socket = Socket}) ->
+    %%Req = utils:open_envelope(Packet),
 
-    State = process_packet(Req, State, utils:unix_timestamp()),
+    %%State = process_packet(Req, State, utils:unix_timestamp()),
+    self() ! {packet, Packet},
+
     ok = inet:setopts(Socket, [{active, once}]),
 
     {noreply, State};
 handle_info({tcp_closed, _Port}, State) ->
     {stop, normal, State};
+handle_info({packet, Packet}, State) ->
+    Req = utils:open_envelope(Packet),
+    NewState = process_packet(Req, State, utils:unix_timestamp()),
+    {noreply, NewState};
+handle_info({operator_removed, Ref}, #state{operator = Ref} = State) ->
+    send(server_message("[server] Your operator left the chat.~n"), State),
+    NewState = State#state{operator = undefined},
+    {noreply, NewState};
 handle_info(Message, State) ->
     _ = lager:notice("unknown handle_info ~p", [Message]),
     {noreply, State}.
@@ -165,9 +177,9 @@ server_message(Msg) ->
         }
     }.
 
-handle_request(create_session, #req {create_session_data = #create_session{ username = Username}}, State) ->
-    NewState = State#state{username = Username},
-    {server_message(io_lib:format("Welcome ~s!~n", [Username])), NewState};
+handle_request(create_session, #req{}, State) ->
+    NewState = State#state{},
+    {noreply, NewState};
 handle_request(caller_id_request, _Req, #state{userID = UID} = State) ->
     {server_message(io_lib:format("----------------~n"
                                   "* Caller ID:   *~n"

@@ -10,7 +10,7 @@
 -ifndef('CREATE_SESSION_PB_H').
 -define('CREATE_SESSION_PB_H', true).
 -record(create_session,
-        {username               :: iodata()         % = 1
+        {
         }).
 -endif.
 

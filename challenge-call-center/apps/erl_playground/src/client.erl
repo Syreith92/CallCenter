@@ -45,7 +45,8 @@ run() ->
     io:format("-------------------------------~n"
               "* Welcome to CallCenter v1.0! *~n"
               "-------------------------------~n"),
-    save_username(),
+    %save_username(),
+    sockclient:send_create_session(),
     loop(functionalities()).
 
 loop(Functionalities) ->
@@ -75,7 +76,7 @@ ask(Prompt) ->
         Input ->
             case string:trim(Input) of
                 "" -> ask(Prompt);
-                S -> s
+                _ -> string:trim(Input)
             end
     end.
 

@@ -8,7 +8,6 @@ functionalities() ->
     [
         #functionality{name = "Request user ID", handler = fun handle_userID/0},
         #functionality{name = "Joke of the day", handler = fun handle_joke/0},
-        #functionality{name = "Weather forecasts", handler = fun handle_weather/0},
         #functionality{name = "Ask for an operator", handler = fun handle_operator_req/0},
         #functionality{name = "Close the call", handler = fun () -> quit end}
     ].
@@ -85,22 +84,20 @@ handle_userID() ->
 handle_joke() ->
     sockclient:send_joke_req().
 
-handle_weather() ->
-    sockclient:send_forecast_req().
-
 handle_operator_req() ->
     sockclient:send_operator_req(),
     io:format("Write 'bye' to quit chat.~n"),
-    operator_chat_loop().
+    operator_mgr:start(),
+    operator_chat_loop(0).
 
-operator_chat_loop() ->
+operator_chat_loop(Interaction) ->
     case ask("> ") of
         "bye" ->
             sockclient:send_operator_quit_req(),
             ok;
         Msg ->
-            sockclient:send_operator_msg_req(Msg),
-            operator_chat_loop()
+            Requests = operator_mgr:ask(Msg, Interaction),
+            operator_chat_loop(Requests)
     end.
 
 flush() ->

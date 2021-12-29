@@ -188,10 +188,38 @@ handle_request(caller_id_request, _Req, #state{userID = UID} = State) ->
         State};
 handle_request(jokes_request, _Req, State) ->
     Joke = jokes:get_joke_for_today(calendar:now_to_datetime(os:timestamp())),
-    {server_message(build_joke_msg(Joke)), State}.
+    {server_message(build_joke_msg(Joke)), State};
+handle_request(operator_request, _Req, State) ->
+    {server_message(build_operator_msg(State, "", 0)), State};
+handle_request(operator_quit_req, _Req, State) ->
+    {server_message("The operator has left the chat.~n"), State};
+handle_request(operator_msg_req, #req{operator_msg = #operator_message{message = Msg, interactions = Interaction}} = Req, State) ->
+    NewState = State#state{operator = Interaction},
+    {server_message(build_operator_msg(State, Msg, Interaction)), NewState}.
 
 build_joke_msg(Joke) ->
     io_lib:format("-------------------------------------------------------------~n"
                   "* Joke of the day:                                          *~n"
                   "-------------------------------------------------------------~n"
                   "~n~s~n", [Joke]).
+
+build_operator_msg(State, Msg, Interaction) ->
+    if 
+        Interaction =:= 0 -> 
+            io_lib:format("------------------------------------~n"
+                          "  Welcome ~s!~n"
+                          "* I'm your operator.               *~n"
+                          "* How can I help you?              *~n"
+                          "------------------------------------~n", [State#state.username]);
+        false ->
+            case (Msg =:= "Timeout" orelse Msg =:= "Maximum") of
+                true ->
+                    io_lib:format("---------------------------------~n"
+                                "* Bye!                          *~n"
+                                "---------------------------------~n", []);
+                false ->
+                    io_lib:format("---------------------------------~n"
+                                  "* ~s *~n"
+                                  "---------------------------------~n", [Msg])
+            end
+    end.

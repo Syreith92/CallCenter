@@ -10,5 +10,5 @@
     recon
    ]},
   {env, [{maxMsg, 3}, {maxSeconds, 10}]},
-  {modules, [client, userid, jokes]}
+  {modules, [client, userid, jokes, operator_mgr]}
  ]}.

@@ -8,6 +8,7 @@ message server_message {
 
 message operator_message {
     required string message = 1;
+    required int32 interactions = 2;
 }
 
 message req {
@@ -16,7 +17,6 @@ message req {
         server_message = 2;
         caller_id_request = 3;
         jokes_request = 4;
-        forecasts_req = 5;
         operator_request = 6;
         operator_msg_req = 7;
         operator_quit_req = 8;

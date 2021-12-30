@@ -2,6 +2,9 @@
 
 -export([run/0]).
 
+-define(OP_TIMEOUT, application:get_env(erl_playground, maxSeconds)).
+-define(OP_MAXREQ, application:get_env(erl_playground, maxMsg)).
+
 -record(functionality, {name, handler}).
 
 functionalities() ->
@@ -87,17 +90,31 @@ handle_joke() ->
 handle_operator_req() ->
     sockclient:send_operator_req(),
     io:format("Write 'bye' to quit chat.~n"),
-    operator_mgr:start(),
-    operator_chat_loop(0).
+    Operator = spawn(fun check_timeout/0),
+    operator_chat_loop(0, Operator).
 
-operator_chat_loop(Interaction) ->
-    case ask("> ") of
-        "bye" ->
+operator_chat_loop(Interaction, Operator) ->
+    {ok, MaxIterations} = ?OP_MAXREQ,
+    if
+        Interaction =:= MaxIterations ->
             sockclient:send_operator_quit_req(),
+            Operator ! "max",
             ok;
-        Msg ->
-            Requests = operator_mgr:ask(Msg, Interaction),
-            operator_chat_loop(Requests)
+        true ->
+            case ask("> ") of
+                "bye" ->
+                    ok;
+                Msg ->
+                    Requests = ask_to_operator(Msg, Interaction, Operator),
+                    if 
+                        Requests < 0 ->
+                            sockclient:send_operator_msg_req(Msg, Interaction),
+                            sockclient:send_operator_quit_req();
+                            ok;
+                        true ->
+                            operator_chat_loop(Requests, Operator)
+                    end
+            end
     end.
 
 flush() ->
@@ -105,4 +122,55 @@ flush() ->
         Message ->
             io:format(Message),
             flush()
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Operator section
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ask_to_operator(Question, Num_interaction, Operator) -> 
+    {ok, Number} = ?OP_MAXREQ,
+    case Num_interaction < Number of
+        true ->
+            Answer = process_question(Question),
+            Interaction = Num_interaction + 1,
+            sockclient:send_operator_msg_req(Answer, Interaction),
+            Operator ! "ok",
+            Interaction;
+        false ->
+            %Msg = "Maximum",
+            Operator ! "max",
+            sockclient:send_operator_quit_req()
+    end.
+
+process_question(Question) ->
+    {Number, Rest} = string:to_integer(Question),
+    case Number =:= error of
+        true ->
+            Msg = Question;
+        false ->
+            Even = (Number rem 2),
+            case Even =:= 0 of
+                true ->
+                    Msg = "The number is even!";
+                false ->
+                    Msg = "The number is odd!"
+            end
+    end.
+
+check_timeout() ->
+    {ok, Number} = ?OP_TIMEOUT,
+    Seconds = Number * 1000,
+
+    receive
+        Msg ->
+            case Msg of
+                "ok" ->
+                    check_timeout();
+                _ ->
+                    quit
+            end
+    after
+        Seconds ->
+            sockclient:send_operator_quit_req(),
+            quit
     end.

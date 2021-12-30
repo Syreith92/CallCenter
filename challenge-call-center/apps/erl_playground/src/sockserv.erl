@@ -77,7 +77,7 @@ start_link(Ref, Socket, Transport, Opts) ->
 %% ------------------------------------------------------------------
 
 init(Ref, Socket, Transport, [_ProxyProtocol]) ->
-    lager:info("sockserv init'ed ~p",[Socket]),
+    %lager:info("sockserv init'ed ~p",[Socket]),
 
     ok = proc_lib:init_ack({ok, self()}),
     ok = ranch:accept_ack(Ref),
@@ -122,10 +122,6 @@ handle_info({tcp_closed, _Port}, State) ->
 handle_info({packet, Packet}, State) ->
     Req = utils:open_envelope(Packet),
     NewState = process_packet(Req, State, utils:unix_timestamp()),
-    {noreply, NewState};
-handle_info({operator_removed, Ref}, #state{operator = Ref} = State) ->
-    send(server_message("[server] Your operator left the chat.~n"), State),
-    NewState = State#state{operator = undefined},
     {noreply, NewState};
 handle_info(Message, State) ->
     _ = lager:notice("unknown handle_info ~p", [Message]),
@@ -192,7 +188,10 @@ handle_request(jokes_request, _Req, State) ->
 handle_request(operator_request, _Req, State) ->
     {server_message(build_operator_msg(State, "", 0)), State};
 handle_request(operator_quit_req, _Req, State) ->
-    {server_message("The operator has left the chat.~n"), State};
+    {server_message("---------------------------------~n"
+                    "* Bye!                          *~n"
+                    "---------------------------------~n"
+                    "The operator has left the chat.~n"), State};
 handle_request(operator_msg_req, #req{operator_msg = #operator_message{message = Msg, interactions = Interaction}} = Req, State) ->
     NewState = State#state{operator = Interaction},
     {server_message(build_operator_msg(State, Msg, Interaction)), NewState}.
@@ -204,6 +203,7 @@ build_joke_msg(Joke) ->
                   "~n~s~n", [Joke]).
 
 build_operator_msg(State, Msg, Interaction) ->
+    Message = 
     if 
         Interaction =:= 0 -> 
             io_lib:format("------------------------------------~n"
@@ -211,15 +211,8 @@ build_operator_msg(State, Msg, Interaction) ->
                           "* I'm your operator.               *~n"
                           "* How can I help you?              *~n"
                           "------------------------------------~n", [State#state.username]);
-        false ->
-            case (Msg =:= "Timeout" orelse Msg =:= "Maximum") of
-                true ->
-                    io_lib:format("---------------------------------~n"
-                                "* Bye!                          *~n"
-                                "---------------------------------~n", []);
-                false ->
-                    io_lib:format("---------------------------------~n"
-                                  "* ~s *~n"
-                                  "---------------------------------~n", [Msg])
-            end
+        true ->
+            io_lib:format("---------------------------------~n"
+                            "* ~s *~n"
+                            "---------------------------------~n", [Msg])
     end.

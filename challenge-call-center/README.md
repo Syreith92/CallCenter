@@ -28,4 +28,25 @@ Google Protocol Buffer is automatically compiled starting from the included prot
 This is a playgrounf application that allows you to focus on the logic of your system, rather than the boring technical stuff. It includes a basic Erlang/OTP application structure with a TCP client and a TCP server.
 
 # Candidate comments
-Please add here everythig you need...
+The implemented solution contains an automatic responder with three distinct functionalities:
+1. Request of CallerID
+2. Request for the joke of the day
+3. Chat with an operator
+
+# 1. CallerID
+At start time, the application assigns a Unique caller ID to the user and when it is asked to show this unique ID, it prints the identifier in the terminal.
+
+# 2. Joke of the day
+The application will return the joke of the current day, picking from a pool of jokes contained in the file 'jokes.txt'. It shows a different joke based on the system current date. To test this functionality is sufficient to change your system clock :)
+
+# 3. Chat with an operator
+When the user ask to chat with an operator, a greeting message is shown and the user can start sending messages.
+The operator has a limited number of interactions and when he reaches this limit, he disconnects from the chat and sends the user back to the menu.
+When the greetings message is shown, a timer is started and if the application does not receive any input in a short period, the operator disconnects from the chat. In this case the user remains connected to the chat and it is necessary to type the word 'bye' to return to the main menu.
+Timeout seconds and the maximum number of requests can be configured in the sys.config file (parameters 'maxSeconds' and 'maxMsg').
+
+# RUN
+To start the application:
+1. open a terminal in the 'challenge-call-center' folder;
+2. type the compilation command 'rebar3 shell';
+3. launch the command 'client:run()'.
